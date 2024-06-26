@@ -1,0 +1,110 @@
+# 환경 설정
+
+iOS와 Android 모두에서 작동하는 첫 번째 애플리케이션을 만들기 전에 Kotlin 다중 플랫폼 개발을 위한 환경을 설정해야 합니다.
+
+> ####
+>
+> iOS 관련 코드를 작성하고 시뮬레이션 또는 실제 장치에서 iOS 애플리케이션을 실행하려면 macOS가 설치된 Mac이 필요합니다. Microsoft Windows와 같은 다른 운영 체제에서는 이 작업을 수행할 수 없습니다. 이는 Apple의 요구 사항입니다.
+
+### 필요한 도구를 설치하십시오﻿ <a href="#install-the-necessary-tools" id="install-the-necessary-tools"></a>
+
+호환성과 더 나은 성능을 위해 최신 안정 버전을 설치하는 것이 좋습니다.
+
+| 도구                                                                                   | 코멘트                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [안드로이드 스튜디오](https://developer.android.com/studio)                                   | Android Studio를 사용하여 다중 플랫폼 애플리케이션을 만들고 시뮬레이션된 기기나 하드웨어 기기에서 실행합니다.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [Xcode](https://apps.apple.com/us/app/xcode/id497799835)                             | <p>별도의 창에서 Xcode를 실행하여 라이선스 조건에 동의하고 몇 가지 필요한 초기 작업을 수행할 수 있도록 하세요.</p><p>대부분의 경우 Xcode는 백그라운드에서 작동합니다. 이를 사용하여 iOS 애플리케이션에 Swift 또는 Objective-C 코드를 추가합니다.</p><h4></h4><p>일반적으로 모든 도구에 대해 최신 안정 버전을 사용하는 것이 좋습니다. 그러나 Kotlin/Native는 최신 Xcode를 즉시 지원하지 않는 경우가 있습니다. <a href="https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility">호환성 가이드</a> 에서 지원되는 버전을 확인 하고 필요한 경우 <a href="https://developer.apple.com/download/all/?q=Xcode">이전 버전의 Xcode를 설치할</a> 수 있습니다 .</p> |
+| [JDK](https://www.oracle.com/java/technologies/javase-downloads.html)                | <p>Java가 설치되어 있는지 확인하려면 Android Studio 터미널이나 명령줄에서 다음 명령을 실행하세요.</p><pre><code>java -version
+</code></pre>                                                                                                                                                                                                                                                                                                                                                                                                  |
+| [Kotlin 멀티 플랫폼 플러그인](https://kotlinlang.org/docs/multiplatform-plugin-releases.html) | Android Studio에서 설정 ( Preferences )을 열고 플러그인 페이지를 찾습니다 . Marketplace 탭에서 _Kotlin Multiplatform을_ 검색한 다음 설치합니다.                                                                                                                                                                                                                                                                                                                                                                                              |
+| [코틀린 플러그인](https://kotlinlang.org/docs/releases.html#update-to-a-new-release)        | <p>Kotlin 플러그인은 각 Android Studio 릴리스와 함께 번들로 제공됩니다. 그러나 호환성 문제를 방지하려면 최신 버전으로 업데이트해야 합니다.</p><p>플러그인을 업데이트하려면 Android Studio 시작 화면에서 플러그인 | 설치되었습니다 . Kotlin 옆에 있는 업데이트를 클릭하세요 . 도구 | 도구 에서 Kotlin 버전을 확인할 수도 있습니다 . 코틀린 | Kotlin 플러그인 업데이트를 구성합니다 .</p><p>Kotlin 플러그인은 Kotlin Multiplatform 플러그인과 호환되어야 합니다. <a href="https://kotlinlang.org/docs/multiplatform-plugin-releases.html#release-details">호환성 표를</a> 참조하십시오 .</p>                                                                              |
+
+### 환경을 확인하세요﻿ <a href="#check-your-environment" id="check-your-environment"></a>
+
+모든 것이 예상대로 작동하는지 확인하려면 KDoctor 도구를 설치하고 실행하십시오.
+
+> ####
+>
+> KDoctor는 macOS에서만 작동합니다.
+
+1.  Android Studio 터미널 또는 명령줄 도구에서 다음 명령을 실행하여 Homebrew를 사용하여 도구를 설치합니다.
+
+    ```
+    brew install kdoctor
+    ```
+
+    아직 Homebrew가 없다면 [설치](https://brew.sh/) 하거나 KDoctor [README](https://github.com/Kotlin/kdoctor#installation) 에서 다른 설치 방법을 확인하세요.
+2.  설치가 완료된 후 콘솔에서 KDoctor를 호출하십시오.
+
+    ```
+    kdoctor
+    ```
+3.  KDoctor가 환경을 확인하는 동안 문제를 진단하는 경우 문제 및 가능한 해결 방법에 대한 출력을 검토하십시오.
+
+    * 실패한 검사를 수정합니다( `[x]`). 기호 다음에 문제 설명과 잠재적 해결 방법을 찾을 수 있습니다 `*`.
+    * 경고( `[!]`)와 성공 메시지( `[v]`)를 확인하세요. 여기에는 유용한 메모와 팁도 포함될 수 있습니다.
+
+    > ####
+    >
+    > CocoaPods 설치에 관한 KDoctor의 경고는 무시해도 됩니다. 첫 번째 프로젝트에서는 다른 iOS 프레임워크 배포 옵션을 사용합니다.
+
+### 가능한 문제 및 해결 방법﻿ <a href="#possible-issues-and-solutions" id="possible-issues-and-solutions"></a>
+
+코틀린과 안드로이드 스튜디오
+
+* Android Studio가 설치되어 있는지 확인하세요. 공식 홈페이지 에서 받으실 수 있습니다 [.](https://developer.android.com/studio)
+* 오류가 발생할 수 있습니다 `Kotlin not configured`. 이는 Android Studio Giraffe 2022.3에서 알려진 문제로, 프로젝트 빌드 및 실행에는 영향을 미치지 않습니다. 오류를 방지하려면 무시를 클릭 하거나 Android Studio Hedgehog 2023.1로 업그레이드하세요.
+
+자바와 JDK
+
+* JDK가 설치되어 있는지 확인하십시오. 당신은 그것의 [공식 웹사이트](https://www.oracle.com/java/technologies/javase-downloads.html) 에서 그것을 얻을 수 있습니다 .
+* Android Studio는 번들 JDK를 사용하여 Gradle 작업을 실행합니다. Android Studio에서 Gradle JDK를 구성하려면 설정/환경 설정 | 빌드, 실행, 배포 | 빌드 도구 | Gradle을 선택합니다 .
+* 와 관련된 문제가 발생할 수 있습니다 `JAVA_HOME`. 이 환경 변수는 Xcode 및 Gradle에 필요한 Java 바이너리의 위치를 ​​지정합니다. 그렇다면 KDoctor의 팁에 따라 문제를 해결하십시오.
+
+Xcode
+
+* Xcode가 설치되어 있는지 확인하세요. 당신은 그것의 [공식 웹사이트](https://developer.apple.com/xcode/) 에서 그것을 얻을 수 있습니다 .
+* 아직 Xcode를 시작하지 않았다면 별도의 창에서 엽니다. 라이센스 조건에 동의하고 몇 가지 필요한 초기 작업을 수행하도록 허용하십시오.
+* `Error: can't grab Xcode schemes`명령줄 도구 선택과 관련하여 다른 문제가 발생할 수 있습니다 . 이 경우 다음 중 하나를 수행하십시오.
+  *   터미널에서 다음을 실행합니다.
+
+      ```
+      sudo xcode-select --switch /Applications/Xcode.app
+      ```
+  *   또는 Xcode에서 설정 | 위치 . 명령줄 도구 필드 에서 Xcode 버전을 선택합니다.
+
+      <figure><img src="https://resources.jetbrains.com/help/img/kotlin-multiplatform-dev/stable/xcode-schemes.png" alt="Xcode 구성표" height="332" width="500"><figcaption></figcaption></figure>
+
+      경로가 `Xcode.app`선택되어 있는지 확인하십시오. 필요한 경우 별도의 창에서 작업을 확인하세요.
+
+코틀린 플러그인
+
+Kotlin 다중 플랫폼 플러그인
+
+* Kotlin Multiplatform 플러그인이 설치되어 있고 활성화되어 있는지 확인하세요. Android Studio 시작 화면에서 플러그인 | 설치되었습니다 . 플러그인이 활성화되어 있는지 확인하십시오. 설치됨 목록 에 없으면 Marketplace 에서 검색하여 플러그인을 설치하세요.
+* 플러그인이 오래된 경우 플러그인 이름 옆에 있는 업데이트를 클릭하세요. 설정 /기본 설정 | 도구 | 플러그인 섹션.
+* [출시 세부정보](https://kotlinlang.org/docs/multiplatform-plugin-releases.html#release-details) 표 에서 사용 중인 Kotlin 버전과 Kotlin Multiplatform 플러그인의 호환성을 확인하세요 .
+
+코틀린 플러그인
+
+Kotlin 플러그인이 최신 버전으로 업데이트되었는지 확인하세요. 그렇게 하려면 Android Studio 시작 화면에서 플러그인 | 설치되었습니다 . Kotlin 옆에 있는 업데이트를 클릭하세요 .
+
+도구 | 도구 에서 Kotlin 버전을 확인할 수도 있습니다 . 코틀린 | Kotlin 플러그인 업데이트를 구성합니다 .
+
+커맨드라인
+
+필요한 모든 도구가 설치되어 있는지 확인하십시오.
+
+* `command not found: brew`— [Homebrew를 설치하십시오](https://brew.sh/) .
+* `command not found: java`— [자바를 설치하세요](https://www.oracle.com/java/technologies/javase-downloads.html) .
+
+### 다음 단계﻿ <a href="#next-step" id="next-step"></a>
+
+자습서의 다음 부분에서는 첫 번째 크로스 플랫폼 모바일 애플리케이션을 만듭니다.
+
+[다음 부분으로 진행](https://www.jetbrains.com/help/kotlin-multiplatform-dev/multiplatform-create-first-app.html)
+
+### 도움 받기﻿ <a href="#get-help" id="get-help"></a>
+
+* 코틀린 슬랙 . [초대를](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up) 받고 [#multiplatform](https://kotlinlang.slack.com/archives/C3PQML5NU) 채널에 참여하세요 .
+* Kotlin 문제 추적기 . [새로운 문제를 신고하세요](https://youtrack.jetbrains.com/newIssue?project=KT) .

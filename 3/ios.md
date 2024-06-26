@@ -1,0 +1,436 @@
+# IOS와 안드로이드 간 로직 공유
+
+이제 외부 종속성을 사용하여 공통 논리를 구현했으므로 더 복잡한 논리를 추가할 수 있습니다. 네트워크 요청 및 데이터 직렬화는 Kotlin Multiplatform을 사용하여 코드를 공유하는 [가장 널리 사용되는 사용 사례](https://kotlinlang.org/lp/multiplatform/) 입니다 . 이 온보딩 여정을 완료한 후 향후 프로젝트에서 사용할 수 있도록 첫 번째 애플리케이션에서 이를 구현하는 방법을 알아보세요.
+
+[업데이트된 앱은 SpaceX API](https://github.com/r-spacex/SpaceX-API/tree/master/docs#rspacex-api-docs) 에서 인터넷을 통해 데이터를 검색하고 SpaceX 로켓이 마지막으로 성공적으로 발사된 날짜를 표시합니다.
+
+### 더 많은 종속성 추가﻿ <a href="#add-more-dependencies" id="add-more-dependencies"></a>
+
+프로젝트에 다음 다중 플랫폼 라이브러리를 추가해야 합니다.
+
+* [`kotlinx.coroutines`](https://github.com/Kotlin/kotlinx.coroutines), 동시 작업을 허용하는 비동기 코드에 코루틴을 사용합니다.
+* [`kotlinx.serialization`](https://github.com/Kotlin/kotlinx.serialization), 네트워크 작업을 처리하는 데 사용되는 엔터티 클래스의 개체로 JSON 응답을 역직렬화합니다.
+* [Ktor는](https://ktor.io/) 인터넷을 통해 데이터를 검색하기 위한 HTTP 클라이언트를 만드는 프레임워크입니다.
+
+#### kotlinx.coroutines﻿ <a href="#kotlinx-coroutines" id="kotlinx-coroutines"></a>
+
+`kotlinx.coroutines`프로젝트에 추가하려면 공통 소스 세트에 종속성을 지정하세요. 이렇게 하려면 `build.gradle.kts`공유 모듈의 파일에 다음 줄을 추가하세요.
+
+```
+kotlin {
+    // ...
+    sourceSets {
+        commonMain.dependencies {
+           // ...
+           implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        }
+    }
+}
+```
+
+Multiplatform Gradle 플러그인은 자동으로 .의 플랫폼별(iOS 및 Android) 부분에 종속성을 추가합니다 `kotlinx.coroutines`.
+
+#### kotlinx.직렬화﻿ <a href="#kotlinx-serialization" id="kotlinx-serialization"></a>
+
+라이브러리를 사용하려면 `kotlinx.serialization`해당 Gradle 플러그인을 설정하세요. 그렇게 하려면 공유 모듈의 파일 `plugins {}`맨 처음에 있는 기존 블록 에 다음 줄을 추가하세요.`build.gradle.kts`
+
+```
+plugins {
+    // ...
+    kotlin("plugin.serialization") version "2.0.0"
+}
+```
+
+#### 어느﻿ <a href="#ktor" id="ktor"></a>
+
+`ktor-client-core`공유 모듈의 공통 소스 세트에 핵심 종속성( )을 추가해야 합니다 . 또한 지원 종속성을 추가해야 합니다.
+
+* 콘텐츠를 특정 형식으로 직렬화 및 역직렬화할 수 있는 `ContentNegotiation`기능( )을 추가합니다 .`ktor-client-content-negotiation`
+* `ktor-serialization-kotlinx-json`Ktor가 JSON 형식을 `kotlinx.serialization`직렬화 라이브러리로 사용하도록 지시하는 종속성을 추가합니다 . Ktor는 JSON 데이터를 예상하고 응답을 받을 때 이를 데이터 클래스로 역직렬화합니다.
+* 플랫폼 소스 세트( `ktor-client-android`, `ktor-client-darwin`)의 해당 아티팩트에 대한 종속성을 추가하여 플랫폼 엔진을 제공합니다.
+
+```
+kotlin {
+    // ...
+    val ktorVersion = "2.3.7"
+
+    sourceSets {
+        commonMain.dependencies {
+            // ...
+
+            implementation("io.ktor:ktor-client-core:$ktorVersion")
+            implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+        }
+        androidMain.dependencies {
+            implementation("io.ktor:ktor-client-android:$ktorVersion")
+        }
+        iosMain.dependencies {
+            implementation("io.ktor:ktor-client-darwin:$ktorVersion")
+        }
+    }
+}
+```
+
+알림에서 지금 동기화를 클릭하여 Gradle 파일을 동기화합니다 .
+
+### API 요청 생성﻿ <a href="#create-api-requests" id="create-api-requests"></a>
+
+[데이터를 검색하려면 SpaceX API가](https://github.com/r-spacex/SpaceX-API/tree/master/docs#rspacex-api-docs) 필요하며 단일 메서드를 사용하여 v4/launches 엔드포인트 에서 모든 실행 목록을 가져옵니다 .
+
+#### 데이터 모델 추가﻿ <a href="#add-a-data-model" id="add-a-data-model"></a>
+
+에서 `shared/src/commonMain/kotlin`새 `RocketLaunch.kt`파일을 만들고 SpaceX API의 데이터를 저장하는 데이터 클래스를 추가합니다.
+
+```
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class RocketLaunch (
+    @SerialName("flight_number")
+    val flightNumber: Int,
+    @SerialName("name")
+    val missionName: String,
+    @SerialName("date_utc")
+    val launchDateUTC: String,
+    @SerialName("success")
+    val launchSuccess: Boolean?,
+)
+```
+
+* 클래스 는 주석 `RocketLaunch`으로 표시되어 플러그인이 자동으로 해당 클래스에 대한 기본 직렬 변환기를 생성할 수 있습니다.`@Serializablekotlinx.serialization`
+* 주석 `@SerialName`을 사용하면 필드 이름을 재정의할 수 있으므로 더 읽기 쉬운 이름으로 데이터 클래스의 속성을 선언할 수 있습니다.
+
+#### HTTP 클라이언트 연결﻿ <a href="#connect-http-client" id="connect-http-client"></a>
+
+1. 에서 `shared/src/commonMain/kotlin`새 `RocketComponent`클래스를 만듭니다.
+2.  `httpClient`HTTP GET 요청을 통해 로켓 발사 정보를 검색하기 위한 속성을 추가합니다 .
+
+    ```
+    import io.ktor.client.*
+    import io.ktor.client.plugins.contentnegotiation.*
+    import io.ktor.serialization.kotlinx.json.*
+    import kotlinx.serialization.json.Json
+
+    class RocketComponent {
+        private val httpClient = HttpClient {
+            install(ContentNegotiation) {
+                json(Json {
+                    prettyPrint = true
+                    isLenient = true
+                    ignoreUnknownKeys = true
+                })
+            }
+        }
+    }
+    ```
+
+    * ContentNegotiation [Ktor 플러그인](https://ktor.io/docs/serialization-client.html#register\_json) 과 JSON 직렬 변환기는 GET 요청의 결과를 역직렬화합니다.
+    * 여기서 JSON 직렬 변환기는 속성을 사용하여 JSON을 더 읽기 쉬운 방식으로 인쇄하는 방식으로 구성됩니다 `prettyPrint`. 를 사용하여 잘못된 형식의 JSON을 읽을 때 더 유연하며 를 사용 `isLenient`하여 로켓 발사 모델에서 선언되지 않은 키를 무시합니다 `ignoreUnknownKeys`.
+3.  `getDateOfLastSuccessfulLaunch()`일시 중지 기능을 다음에 추가하십시오 `RocketComponent`.
+
+    ```
+    private suspend fun getDateOfLastSuccessfulLaunch(): String {
+        // ...
+    }
+    ```
+4.  `httpClient.get()`로켓 발사에 대한 정보를 검색하는 함수를 호출합니다 .
+
+    ```
+    import io.ktor.client.request.*
+    import io.ktor.client.call.*
+
+    private suspend fun getDateOfLastSuccessfulLaunch(): String {
+        val rockets: List<RocketLaunch> = httpClient.get("https://api.spacexdata.com/v4/launches").body()
+    }
+    ```
+
+    * `httpClient.get()`스레드를 차단하지 않고 비동기적으로 네트워크를 통해 데이터를 검색해야 하기 때문에 일시 중지 기능이기도 합니다.
+    * 정지 함수는 코루틴이나 기타 정지 함수에서만 호출할 수 있습니다. 이것이 키워드 `getDateOfLastSuccessfulLaunch()`로 표시되는 이유입니다 `suspend`. 네트워크 요청은 HTTP 클라이언트의 스레드 풀에서 실행됩니다.
+5.  목록에서 마지막으로 성공한 실행을 찾으려면 함수를 다시 업데이트하세요.
+
+    ```
+    private suspend fun getDateOfLastSuccessfulLaunch(): String {
+        val rockets: List<RocketLaunch> = httpClient.get("https://api.spacexdata.com/v4/launches").body()
+        val lastSuccessLaunch = rockets.last { it.launchSuccess == true }
+    }
+    ```
+
+    로켓 발사 목록은 가장 오래된 것부터 최신 날짜 순으로 정렬됩니다.
+6.  시작 날짜를 UTC에서 현지 날짜로 변환하고 출력 형식을 지정합니다.
+
+    ```
+    import kotlinx.datetime.Instant
+    import kotlinx.datetime.TimeZone
+    import kotlinx.datetime.toLocalDateTime
+
+    private suspend fun getDateOfLastSuccessfulLaunch(): String {
+        val rockets: List<RocketLaunch> =
+            httpClient.get("https://api.spacexdata.com/v4/launches").body()
+        val lastSuccessLaunch = rockets.last { it.launchSuccess == true }
+        val date = Instant.parse(lastSuccessLaunch.launchDateUTC)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+
+        return "${date.month} ${date.dayOfMonth}, ${date.year}"
+    }
+    ```
+
+    날짜는 'MMMM DD, YYYY' 형식입니다(예: 2022년 10월 5일).
+7.  `launchPhrase()`함수 를 사용하여 메시지를 생성하는 또 다른 일시 중지 함수를 추가합니다 `getDateOfLastSuccessfulLaunch()`.
+
+    ```
+    suspend fun launchPhrase(): String =
+        try {
+            "The last successful launch was on ${getDateOfLastSuccessfulLaunch()} 🚀"
+        } catch (e: Exception) {
+            println("Exception during getting the date of the last successful launch $e")
+            "Error occurred"
+        }
+    ```
+
+#### 흐름 만들기﻿ <a href="#create-the-flow" id="create-the-flow"></a>
+
+일시 중단 함수 대신 흐름을 사용할 수 있습니다. 일시 중단 함수가 반환하는 단일 값 대신 값 시퀀스를 방출합니다.
+
+1. `Greeting.kt`디렉터리 에서 파일을 엽니다 `shared/src/commonMain/kotlin`.
+2.  `rocketComponent`클래스 에 속성을 추가합니다 `Greeting`. 속성은 마지막 성공적인 시작 날짜와 함께 메시지를 저장합니다.
+
+    ```
+    private val rocketComponent = RocketComponent()
+    ```
+3.  `greet()`다음을 반환하도록 함수를 변경합니다 `Flow`.
+
+    ```
+    import kotlinx.coroutines.delay
+    import kotlinx.coroutines.flow.Flow
+    import kotlinx.coroutines.flow.flow
+    import kotlin.time.Duration.Companion.seconds
+
+    fun greet(): Flow<String> = flow {
+         emit(if (Random.nextBoolean()) "Hi!" else "Hello!")
+         delay(1.seconds)
+         emit("Guess what this is! > ${platform.name.reversed()}")
+         delay(1.seconds)
+         emit(daysPhrase())
+         emit(rocketComponent.launchPhrase())
+    }
+    ```
+
+    * `Flow`여기서는 `flow()`모든 명령문을 래핑하는 빌더 함수를 사용하여 생성 됩니다.
+    * `Flow`각 방출 사이에 1초의 지연을 두고 문자열을 방출합니다 . 마지막 요소는 네트워크 응답이 반환된 후에만 방출되므로 정확한 지연은 네트워크에 따라 다릅니다.
+
+#### 인터넷 액세스 권한 추가﻿ <a href="#add-internet-access-permission" id="add-internet-access-permission"></a>
+
+인터넷에 접속하려면 Android 애플리케이션에 적절한 권한이 필요합니다. 모든 네트워크 요청은 공유 모듈에서 이루어지기 때문에 매니페스트에 인터넷 액세스 권한을 추가하는 것이 합리적입니다.
+
+`composeApp/src/androidMain/AndroidManifest.xml`액세스 권한으로 파일을 업데이트합니다 .
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    ...
+</manifest>
+```
+
+### 기본 Android 및 iOS UI 업데이트﻿ <a href="#update-native-android-and-ios-ui" id="update-native-android-and-ios-ui"></a>
+
+`greet()`함수 의 반환 유형을 로 변경하여 공유 모듈의 API를 이미 업데이트했습니다 `Flow`. 이제 함수 호출 결과를 적절하게 처리할 수 있도록 프로젝트의 기본(iOS, Android) 부분을 업데이트해야 합니다 `greet()`.
+
+#### 안드로이드 앱﻿ <a href="#android-app" id="android-app"></a>
+
+공유 모듈과 Android 애플리케이션 모두 Kotlin으로 작성되었으므로 Android의 공유 코드를 사용하는 것은 간단합니다.
+
+**뷰 모델 소개**﻿
+
+이제 애플리케이션이 더욱 복잡해지고 있으므로 이라는 [Android 활동](https://developer.android.com/guide/components/activities/intro-activities)`MainActivity` 에 뷰 모델을 도입할 차례입니다 . `App()`UI를 구현하는 함수를 호출합니다 . 뷰 모델은 활동의 데이터를 관리하며 활동의 수명 주기가 변경될 때 사라지지 않습니다.
+
+1.  파일 에 다음 종속성을 추가합니다 `composeApp/build.gradle.kts`.
+
+    ```
+    androidMain.dependencies {
+        // ...
+        implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+        implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    }
+    ```
+2.  에서 `composeApp/src/androidMain/kotlin`새 `MainViewModel`Kotlin 클래스를 만듭니다.
+
+    ```
+    import androidx.lifecycle.ViewModel
+
+    class MainViewModel : ViewModel() {
+        // ...
+    }
+    ```
+
+    이 클래스는 Android `ViewModel`클래스를 확장하여 수명 주기 및 구성 변경과 관련된 올바른 동작을 보장합니다.
+3.  [StateFlow](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-state-flow/)`greetingList` 유형 의 값 과 해당 지원 속성을 만듭니다 .
+
+    ```
+    import kotlinx.coroutines.flow.MutableStateFlow
+    import kotlinx.coroutines.flow.StateFlow
+
+    class MainViewModel : ViewModel() {
+        private val _greetingList = MutableStateFlow<List<String>>(listOf())
+        val greetingList: StateFlow<List<String>> get() = _greetingList
+    }
+    ```
+
+    * `StateFlow`여기서는 `Flow`인터페이스를 확장하지만 단일 값이나 상태를 갖습니다.
+    * 개인 백업 속성은 `_greetingList`이 클래스의 클라이언트만 읽기 전용 `greetingList`속성에 액세스할 수 있도록 보장합니다.
+4.  `init`뷰 모델의 기능 에서 `Greeting().greet()`흐름의 모든 문자열을 수집합니다.
+
+    ```
+    import androidx.lifecycle.viewModelScope
+    import kotlinx.coroutines.launch
+
+    class MainViewModel : ViewModel() {
+       private val _greetingList = MutableStateFlow<List<String>>(listOf())
+       val greetingList: StateFlow<List<String>> get() = _greetingList
+
+       init {
+           viewModelScope.launch {
+               Greeting().greet().collect { phrase ->
+                    //...
+               }
+           }
+       }
+    }
+    ```
+
+    함수가 `collect()`일시 중단되었으므로 `launch`코루틴은 뷰 모델 범위 내에서 사용됩니다. 이는 실행 코루틴이 뷰 모델 수명 주기의 올바른 단계에서만 실행된다는 것을 의미합니다.
+5.  후행 람다 내에서 다음의 구문 목록에 수집된 값을 추가하도록 `collect`값을 업데이트합니다 .`_greetingListphraselist`
+
+    ```
+    import kotlinx.coroutines.flow.update
+
+    class MainViewModel : ViewModel() {
+        //...
+
+        init {
+            viewModelScope.launch {
+                Greeting().greet().collect { phrase ->
+                    _greetingList.update { list -> list + phrase }
+                }
+            }
+        }
+    }
+    ```
+
+    이 `update()`함수는 값을 자동으로 업데이트합니다.
+
+**뷰 모델의 흐름을 사용하세요**﻿
+
+1.  에서 파일 `composeApp/src/androidMain/kotlin`을 찾아 `App.kt`업데이트하여 이전 구현을 대체합니다.
+
+    ```
+    import androidx.lifecycle.compose.collectAsStateWithLifecycle
+    import androidx.compose.runtime.getValue
+    import androidx.lifecycle.viewmodel.compose.viewModel
+
+    @Composable
+    fun App(mainViewModel: MainViewModel = viewModel()) {
+        MaterialTheme {
+            val greetings by mainViewModel.greetingList.collectAsStateWithLifecycle()
+
+            Column(
+                modifier = Modifier.padding(all = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                greetings.forEach { greeting ->
+                    Text(greeting)
+                    Divider()
+                }
+            }
+        }
+    }
+    ```
+
+    * 이 함수는 뷰 모델의 흐름에서 값을 수집하고 이를 수명 주기 인식 방식으로 구성 가능한 상태로 표시하도록 `collectAsStateWithLifecycle()`호출합니다 .`greetingList`
+    * 새 흐름이 생성되면 작성 상태가 변경되고 `Column`세로로 배열되고 구분선으로 구분된 인사말 문구가 포함된 스크롤 가능한 항목이 표시됩니다.
+2.  결과를 보려면 Android Studio에서 composeApp 구성을 다시 실행하세요.
+
+    <figure><img src="https://resources.jetbrains.com/help/img/kotlin-multiplatform-dev/stable/multiplatform-mobile-upgrade-android.png" alt="최종 결과" height="626" width="300"><figcaption></figcaption></figure>
+
+#### iOS 앱﻿ <a href="#ios-app" id="ios-app"></a>
+
+프로젝트의 iOS 부분에서는 [Model-view-viewmodel](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel) 패턴을 다시 사용하여 UI를 모든 비즈니스 로직이 포함된 공유 모듈에 연결합니다.
+
+모듈은 이미 선언 `ContentView.swift`과 함께 파일 로 가져왔습니다 `import Shared`.
+
+> ####
+>
+> 공유 모듈과 관련하여 Xcode에서 오류가 표시되거나 코드를 업데이트할 때 Android Studio에서 iosApp 구성을 실행하세요.
+
+**뷰 모델 소개**﻿
+
+1. Xcode에서 iOS 앱으로 돌아갑니다.
+2.  에서 `iosApp/iOSApp.swift`앱의 진입점을 업데이트합니다.
+
+    ```
+    @main
+    struct iOSApp: App {
+        var body: some Scene {
+            WindowGroup {
+                ContentView(viewModel: ContentView.ViewModel())
+            }
+        }
+    }
+    ```
+3.  에서 데이터를 준비하고 관리할 클래스를 `iosApp/ContentView.swift`만듭니다 . 동시성을 지원하려면 호출 내에서 함수를 호출하세요 .`ViewModelContentViewstartObserving()task()`
+
+    ```
+    import SwiftUI
+    import Shared
+
+    struct ContentView: View {
+        @ObservedObject private(set) var viewModel: ViewModel
+
+        var body: some View {
+            ListView(phrases: viewModel.greetings)
+                .task { await self.viewModel.startObserving() }
+        }
+    }
+
+    extension ContentView {
+        @MainActor
+        class ViewModel: ObservableObject {
+            @Published var greetings: Array<String> = []
+
+            func startObserving() {
+                // ...
+            }
+        }
+    }
+
+    struct ListView: View {
+        let phrases: Array<String>
+
+        var body: some View {
+            List(phrases, id: \.self) {
+                Text($0)
+            }
+        }
+    }
+    ```
+
+    * `ViewModelContentView`은 밀접하게 연결되어 있으므로 의 확장으로 선언됩니다 .
+    * `ViewModelgreetings`구문 배열인 속성이 있습니다 `String`. SwiftUI는 뷰 모델( `ContentView.ViewModel`)을 뷰( `ContentView`)와 연결합니다.
+    * `ContentView.ViewModel`으로 선언됩니다 `ObservableObject`.
+    * 래퍼 는 속성 `@Published`에 사용됩니다 `greetings`.
+    * 속성 `@ObservedObject`래퍼는 뷰 모델을 구독하는 데 사용됩니다.
+
+이제 뷰 모델은 이 속성이 변경될 때마다 신호를 내보냅니다.
+
+**iOS의 흐름을 사용할 라이브러리 선택**﻿
+
+[이 튜토리얼에서는 SKIE](https://github.com/touchlab/SKIE/) 및 [KMP-NativeCoroutines](https://github.com/rickclephas/KMP-NativeCoroutines) 라이브러리 중에서 선택하여 iOS에서 흐름 작업을 수행하는 데 도움을 줄 수 있습니다. 둘 다 Kotlin/Native 컴파일러가 아직 기본적으로 제공하지 않는 취소 및 흐름의 제네릭을 지원하는 오픈 소스 솔루션입니다.
+
+SKIE 라이브러리는 Kotlin 컴파일러에서 생성된 Objective-C API를 강화합니다. SKIE는 흐름을 Swift의 `AsyncSequence`. SKIE는 스레드 제한 없이 자동 양방향 취소 기능을 통해 Swift의 `async`/ 를 직접 지원합니다(Combine 및 RxSwift에는 어댑터 필요). `await`SKIE는 다양한 Kotlin 유형을 Swift에 상응하는 유형으로 연결하는 것을 포함하여 Kotlin에서 Swift 친화적인 API를 생성하는 다른 기능을 제공합니다. 또한 iOS 프로젝트에 추가 종속성을 추가할 필요가 없습니다.
+
+KMP-NativeCoroutines 라이브러리는 필요한 래퍼를 생성하여 iOS에서 일시 중지 기능과 흐름을 사용하는 데 도움이 됩니다. KMP-NativeCoroutine은 Swift의 `async`/ `await`기능은 물론 Combine 및 RxSwift도 지원합니다. SKIE보다 오랫동안 사용 가능했기 때문에 오늘날에는 예외적인 사례가 더 적게 발생할 수 있습니다. KMP-NativeCoroutine을 사용하려면 iOS 프로젝트에 Cocoapod 또는 SPM 종속성을 추가해야 합니다.
+
+\
