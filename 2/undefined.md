@@ -2,7 +2,7 @@
 
 ### 유연한 멀티플랫폼 개발을 위한 JetBrains의 오픈 소스 기술
 
-Kotlin Multiplatform은 네이티브 프로그래밍의 이점을 유지하면서 다양한 플랫폼용 애플리케이션을 만들고 플랫폼 전체에서 코드를 효율적으로 재사용할 수 있게 해주는 기술입니다. 당신의 멀티플랫폼으로 구축된 애플리케이션은 iOS, Android, macOS, Windows, Linux 등과 같은 다양한 운영 체제에서 작동합니다.
+코틀린 멀티플랫폼은 네이티브 프로그래밍의 이점을 유지하면서 다양한 플랫폼용 애플리케이션을 만들고 플랫폼 전체에서 코드를 효율적으로 재사용할 수 있게 해주는 기술입니다. 당신의 멀티플랫폼으로 구축된 애플리케이션은 iOS, Android, macOS, Windows, Linux 등과 같은 다양한 운영 체제에서 작동합니다.
 
 <figure><img src="../.gitbook/assets/SCR-20240623-rqgn.png" alt=""><figcaption></figcaption></figure>
 
@@ -20,17 +20,17 @@ Kotlin Multiplatform은 네이티브 프로그래밍의 이점을 유지하면�
 
 #### 로직을 공유하고 UI 네이티브를 유지
 
-새로운 프로젝트를 시작할 때 Kotlin Multiplatform을 사용하고 데이터 처리 및 비즈니스 로직을 한 번만 구현하세요. 엄격한 요구 사항을 충족하려면 UI 네이티브를 유지하세요.
+새로운 프로젝트를 시작할 때 코틀린 멀티플랫폼을 사용하여 데이터 처리 및 비즈니스 로직을 한 번만 구현하세요. 엄격한 요구 사항을 충족하려면 UI 네이티브를 유지하세요.
 
 #### 코드를 100%까지 공유
 
-여러 플랫폼에서 UI를 공유하기 위한 JetBrains의 현대적인 선언적 프레임워크인 Compose Multiplatform을 사용하여 개발 효율성을 높이고 코드를 100%까지 공유하세요.
+여러 플랫폼에서 UI를 공유하기 위한 JetBrains의 현대적인 선언적 프레임워크인 컴포즈 멀티플랫폼을 사용하여 개발 효율성을 높이고 코드를 100%까지 공유하세요.
 
 ***
 
-### Compose Multiplatform으로 한 번에 UI를 구축
+### 컴포즈 멀티플랫폼으로 한 번에 UI를 구축
 
-Compose Multiplatform은 Kotlin 및 Jetpack Compose를 기반으로 Android, iOS, 웹, 데스크톱(JVM을 통해)에서 UI를 공유하기 위한 선언적 프레임워크입니다.
+컴포즈 멀티플랫폼은 Kotlin 및 Jetpack Compose를 기반으로 Android, iOS, 웹, 데스크톱(JVM을 통해)에서 UI를 공유하기 위한 선언적 프레임워크입니다.
 
 #### 가속화된 UI 개발
 
